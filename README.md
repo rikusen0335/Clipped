@@ -2,6 +2,9 @@
 
 A minimal clip editor dedicated to one thing: trimming videos.
 
+<img width="1268" height="908" alt="image" src="https://github.com/user-attachments/assets/3777255c-b132-475a-a1b6-2097f8449927" />
+
+
 Built with Tauri 2 + React + TypeScript + Mantine. Export is powered by a bundled ffmpeg.
 
 **日本語版はこちら → [docs/README-JA.md](docs/README-JA.md)**
