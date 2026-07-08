@@ -21,6 +21,7 @@ Built with Tauri 2 + React + TypeScript + Mantine. Export is powered by a bundle
 - Export progress bar and cancellation
 - English / Japanese UI (switchable in the title bar)
 - Windows Explorer context menu: right-click a video file and choose "Edit with Clipped"
+- In-app auto-update: checks [GitHub Releases](https://github.com/rikusen0335/Clipped/releases) on launch and shows an "Update available" button that downloads and installs the new version automatically
 
 ## Keyboard shortcuts
 
@@ -58,6 +59,25 @@ pnpm tauri build
 The NSIS installer is generated in `src-tauri/target/release/bundle/nsis/`.
 The installer also registers the Explorer context menu entry
 ("Edit with Clipped" — or 「Clippedで編集」 when installed in Japanese).
+
+## Releasing (auto-update)
+
+Clipped ships with [Tauri's updater plugin](https://v2.tauri.app/plugin/updater/), which checks
+`https://github.com/rikusen0335/Clipped/releases/latest/download/latest.json` on launch.
+Publishing a new version requires signed installers, produced by
+[.github/workflows/build-and-release.yml](.github/workflows/build-and-release.yml):
+
+1. One-time setup: an updater signing keypair was generated with
+   `pnpm tauri signer generate -w updater.key`. Add the **private key's file contents**
+   as a repository secret named `TAURI_SIGNING_PRIVATE_KEY` (Settings → Secrets and
+   variables → Actions). The public key is already embedded in `src-tauri/tauri.conf.json`
+   (`plugins.updater.pubkey`). Never commit `updater.key`.
+2. Bump the version to the same value in `src-tauri/tauri.conf.json`, `package.json`,
+   and `src-tauri/Cargo.toml`.
+3. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
+4. The workflow builds signed Windows (NSIS) and Linux (AppImage) artifacts and publishes
+   them to a **draft** GitHub Release together with `latest.json`. Review and publish the
+   draft release — only published (non-draft) releases are visible to the updater endpoint.
 
 ## License
 

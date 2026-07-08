@@ -42,6 +42,10 @@ const resources = {
       ffmpegSite: "FFmpeg website",
       ffmpegBuilds: "Bundled build (BtbN/FFmpeg-Builds)",
       gplText: "GPL v3 license text",
+      updateAvailable: "Update available",
+      updateAvailableHint: "Version {{version}} is available. Click to download and install.",
+      updating: "Updating...",
+      updateFailed: "Update failed",
     },
   },
   ja: {
@@ -83,6 +87,10 @@ const resources = {
       ffmpegSite: "FFmpeg公式サイト",
       ffmpegBuilds: "同梱ビルド (BtbN/FFmpeg-Builds)",
       gplText: "GPL v3 ライセンス全文",
+      updateAvailable: "アップデートあり",
+      updateAvailableHint: "バージョン {{version}} が利用可能です。クリックしてダウンロード・インストールします。",
+      updating: "更新中...",
+      updateFailed: "アップデートに失敗しました",
     },
   },
 };

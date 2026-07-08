@@ -28,8 +28,17 @@
       }
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgyOERBQTQ4RDc5MjM4MEMKUldRTU9KTFhTS3FOZ3ZUUUgyTDAwaGQ1ekpzTm1kclh6TUZuYmw5RWZjaWdPTDBHTTJHcEVwdHEK",
+      "endpoints": [
+        "https://github.com/rikusen0335/Clipped/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["nsis"],
     "externalBin": ["binaries/ffmpeg"],
     "licenseFile": "../LICENSE",

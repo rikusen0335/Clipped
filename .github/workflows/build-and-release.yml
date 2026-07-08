@@ -1,9 +1,17 @@
 name: Main
 
+# vX.Y.Z タグをpushすると、署名付きインストーラをビルドし、latest.json付きで
+# GitHub Releaseに公開する(下書き状態)。アプリ内蔵アップデーターはこの
+# latest.json を参照するため、tauri-action を使って署名・生成している。
+# タグを打つ前に、tauri.conf.json / package.json / src-tauri/Cargo.toml の
+# バージョンをすべて同じ値に揃えておくこと。
 on:
   push:
     tags:
       - "v*.*.*"
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -13,17 +21,10 @@ jobs:
         include:
           - os: windows-latest
             ffmpeg: windows
-            bundles: nsis
-            artifact-name: clipped-windows
-            artifact-path: |
-              src-tauri/target/release/bundle/nsis/*.exe
+            args: --bundles nsis
           - os: ubuntu-24.04
             ffmpeg: linux
-            bundles: deb,appimage
-            artifact-name: clipped-linux
-            artifact-path: |
-              src-tauri/target/release/bundle/deb/*.deb
-              src-tauri/target/release/bundle/appimage/*.AppImage
+            args: --bundles appimage
 
     runs-on: ${{ matrix.os }}
 
@@ -66,17 +67,15 @@ jobs:
       - name: Download ffmpeg to bundle
         run: node scripts/fetch-ffmpeg.mjs ${{ matrix.ffmpeg }}
 
-      - name: Build Tauri app
-        run: pnpm tauri build --bundles ${{ matrix.bundles }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+      - name: Build and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          name: ${{ matrix.artifact-name }}
-          path: ${{ matrix.artifact-path }}
-          if-no-files-found: error
-
-      - name: Release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: ${{ matrix.artifact-path }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "Clipped ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

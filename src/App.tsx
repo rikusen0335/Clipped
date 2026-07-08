@@ -35,16 +35,18 @@ import {
 } from "@tabler/icons-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check as checkUpdate, type Update } from "@tauri-apps/plugin-updater";
 import { useTranslation } from "react-i18next";
 import Timeline from "./Timeline";
 import { formatTime, parseTime } from "./format";
 
 const VIDEO_EXTS = ["mp4", "mkv", "mov", "webm", "avi", "ts", "m4v"];
-const APP_VERSION = "0.1.0";
 const appWindow = getCurrentWindow();
 
 interface ExportProgress {
@@ -68,6 +70,10 @@ export default function App() {
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [ffmpegOk, setFfmpegOk] = useState<boolean | null>(null);
+  const [appVersion, setAppVersion] = useState("");
+  const [update, setUpdate] = useState<Update | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(0);
   const [aboutOpen, { open: openAbout, close: closeAbout }] = useDisclosure(false);
   // WebViewが直接再生できない形式(HEVC等)の場合に使う、同梱ffmpegで
   // 生成したH.264プレビュー用コピー。書き出しは常にfilePath(元ファイル)を使う
@@ -81,6 +87,53 @@ export default function App() {
       .then(() => setFfmpegOk(true))
       .catch(() => setFfmpegOk(false));
   }, []);
+
+  useEffect(() => {
+    getVersion().then(setAppVersion);
+  }, []);
+
+  // GitHub Releases (https://github.com/rikusen0335/Clipped/releases) の
+  // latest.json をチェックし、新しいバージョンがあれば通知する
+  useEffect(() => {
+    checkUpdate()
+      .then((result) => {
+        if (result?.available) setUpdate(result);
+      })
+      .catch((e) => console.error("update check failed", e));
+  }, []);
+
+  const installUpdate = useCallback(async () => {
+    if (!update) return;
+    setUpdating(true);
+    setUpdateProgress(0);
+    let total = 0;
+    let received = 0;
+    try {
+      await update.downloadAndInstall((event) => {
+        switch (event.event) {
+          case "Started":
+            total = event.data.contentLength ?? 0;
+            break;
+          case "Progress":
+            received += event.data.chunkLength;
+            if (total > 0) setUpdateProgress(received / total);
+            break;
+          case "Finished":
+            setUpdateProgress(1);
+            break;
+        }
+      });
+      await relaunch();
+    } catch (e) {
+      notifications.show({
+        color: "red",
+        title: t("updateFailed"),
+        message: String(e),
+        autoClose: 10000,
+      });
+      setUpdating(false);
+    }
+  }, [update, t]);
 
 
   // 書き出し進捗イベント
@@ -369,6 +422,21 @@ export default function App() {
               </Badge>
             </Tooltip>
           )}
+          {update && !updating && (
+            <Tooltip label={t("updateAvailableHint", { version: update.version })}>
+              <Button size="xs" color="teal" variant="light" onClick={installUpdate}>
+                {t("updateAvailable")}
+              </Button>
+            </Tooltip>
+          )}
+          {updating && (
+            <Group gap={6} wrap="nowrap">
+              <Progress value={updateProgress * 100} w={100} animated />
+              <Text size="xs" c="dimmed">
+                {t("updating")}
+              </Text>
+            </Group>
+          )}
           <Select
             size="xs"
             w={110}
@@ -581,7 +649,7 @@ export default function App() {
         <Stack gap="sm">
           <Group gap="xs">
             <IconScissors size={20} color="var(--mantine-color-violet-4)" />
-            <Text fw={700}>Clipped v{APP_VERSION}</Text>
+            <Text fw={700}>Clipped v{appVersion}</Text>
           </Group>
           <Text size="sm">{t("aboutLicense")}</Text>
           <Text size="sm" c="dimmed">

@@ -4,3 +4,5 @@ src-tauri/target
 src-tauri/gen
 src-tauri/binaries
 *.local
+updater.key
+updater.key.pub
