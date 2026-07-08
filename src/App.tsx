@@ -8,7 +8,9 @@ import {
   Center,
   Group,
   Kbd,
+  Loader,
   Modal,
+  Overlay,
   Progress,
   SegmentedControl,
   Select,
@@ -31,7 +33,7 @@ import {
   IconSquare,
   IconX,
 } from "@tabler/icons-react";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -67,6 +69,11 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [ffmpegOk, setFfmpegOk] = useState<boolean | null>(null);
   const [aboutOpen, { open: openAbout, close: closeAbout }] = useDisclosure(false);
+  // WebViewが直接再生できない形式(HEVC等)の場合に使う、同梱ffmpegで
+  // 生成したH.264プレビュー用コピー。書き出しは常にfilePath(元ファイル)を使う
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
+  const triedProxyRef = useRef(false);
 
   // ffmpegの存在チェック
   useEffect(() => {
@@ -86,15 +93,32 @@ export default function App() {
     };
   }, []);
 
-  const loadFile = useCallback((path: string) => {
-    setFilePath(path);
-    setVideoUrl(convertFileSrc(path));
-    setCurrent(0);
-    setInPoint(0);
-    setOutPoint(0);
-    setDuration(0);
-    setPlaying(false);
-  }, []);
+  const loadFile = useCallback(
+    (path: string) => {
+      setFilePath(path);
+      setVideoUrl(null);
+      setPreviewSrc(null);
+      triedProxyRef.current = false;
+      setCurrent(0);
+      setInPoint(0);
+      setOutPoint(0);
+      setDuration(0);
+      setPlaying(false);
+      // asset://経由だとLinux/WebKitGTKで<video>の読み込みが不安定になるため、
+      // Range対応のローカルHTTPサーバー(Rust側)で配信して再生する
+      invoke<string>("set_preview_file", { path })
+        .then((url) => setVideoUrl(url))
+        .catch((e) => {
+          notifications.show({
+            color: "red",
+            title: t("videoErrorTitle"),
+            message: String(e),
+            autoClose: 15000,
+          });
+        });
+    },
+    [t],
+  );
 
   // ドラッグ&ドロップで開く
   useEffect(() => {
@@ -133,9 +157,34 @@ export default function App() {
   useEffect(() => setInText(formatTime(inPoint)), [inPoint]);
   useEffect(() => setOutText(formatTime(outPoint)), [outPoint]);
 
+  // videoのsrcを差し替えた際(プロキシへの切替を含む)、確実に再読み込みする
+  useEffect(() => {
+    videoRef.current?.load();
+  }, [videoUrl, previewSrc]);
+
   const onVideoError = () => {
     const err = videoRef.current?.error;
-    if (!err) return;
+    if (!err || !filePath) return;
+
+    // デコード/形式エラーなら、同梱ffmpegでH.264プレビューを生成して1回だけ再試行する
+    if ((err.code === 3 || err.code === 4) && !triedProxyRef.current) {
+      triedProxyRef.current = true;
+      setGeneratingPreview(true);
+      invoke<string>("make_preview_proxy", { input: filePath })
+        .then((proxyPath) => invoke<string>("set_preview_file", { path: proxyPath }))
+        .then((url) => setPreviewSrc(url))
+        .catch((e) => {
+          notifications.show({
+            color: "red",
+            title: t("videoErrorTitle"),
+            message: String(e),
+            autoClose: 15000,
+          });
+        })
+        .finally(() => setGeneratingPreview(false));
+      return;
+    }
+
     const reasons: Record<number, string> = {
       1: t("videoErrorAborted"),
       2: t("videoErrorNetwork"),
@@ -377,11 +426,11 @@ export default function App() {
       </Group>
 
       {/* プレビュー */}
-      <Box flex={1} style={{ minHeight: 0, background: "#000" }}>
+      <Box flex={1} pos="relative" style={{ minHeight: 0, background: "#000" }}>
         {videoUrl ? (
           <video
             ref={videoRef}
-            src={videoUrl}
+            src={previewSrc ?? videoUrl}
             onLoadedMetadata={onLoadedMetadata}
             onError={onVideoError}
             onTimeUpdate={onTimeUpdate}
@@ -407,6 +456,18 @@ export default function App() {
               </Group>
             </Stack>
           </Center>
+        )}
+        {generatingPreview && (
+          <Overlay color="#000" backgroundOpacity={0.75} zIndex={5}>
+            <Center h="100%">
+              <Stack align="center" gap="xs">
+                <Loader color="violet" />
+                <Text size="sm" c="dimmed">
+                  {t("previewGenerating")}
+                </Text>
+              </Stack>
+            </Center>
+          </Overlay>
         )}
       </Box>
 
