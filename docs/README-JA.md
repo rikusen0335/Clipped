@@ -2,6 +2,8 @@
 
 動画の切り抜き(トリミング)だけに特化したシンプルなクリップエディタ。
 
+<img width="1268" height="908" alt="image" src="https://github.com/user-attachments/assets/9b2c7b73-2707-422f-b98a-1e43c1fb96c1" />
+
 Tauri 2 + React + TypeScript + Mantine 製。書き出しには同梱のffmpegを使用します。
 
 **English version → [../README.md](../README.md)**
