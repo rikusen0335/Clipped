@@ -133,6 +133,23 @@ export default function App() {
   useEffect(() => setInText(formatTime(inPoint)), [inPoint]);
   useEffect(() => setOutText(formatTime(outPoint)), [outPoint]);
 
+  const onVideoError = () => {
+    const err = videoRef.current?.error;
+    if (!err) return;
+    const reasons: Record<number, string> = {
+      1: t("videoErrorAborted"),
+      2: t("videoErrorNetwork"),
+      3: t("videoErrorDecode"),
+      4: t("videoErrorSrc"),
+    };
+    notifications.show({
+      color: "red",
+      title: t("videoErrorTitle"),
+      message: t("videoError", { code: err.code, reason: reasons[err.code] ?? err.message }),
+      autoClose: 15000,
+    });
+  };
+
   const onLoadedMetadata = () => {
     const v = videoRef.current;
     if (!v) return;
@@ -366,6 +383,7 @@ export default function App() {
             ref={videoRef}
             src={videoUrl}
             onLoadedMetadata={onLoadedMetadata}
+            onError={onVideoError}
             onTimeUpdate={onTimeUpdate}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}

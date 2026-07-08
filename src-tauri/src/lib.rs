@@ -183,6 +183,10 @@ pub fn run() {
             if std::env::var_os("LIBGL_ALWAYS_SOFTWARE").is_none() {
                 std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
             }
+            // GLコンポジット経由の描画で映像だけ黒くなる問題の回避
+            if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+                std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+            }
         }
     }
 
