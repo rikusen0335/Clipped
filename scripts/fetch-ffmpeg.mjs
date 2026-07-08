@@ -71,12 +71,12 @@ if (wantLinux) {
   if (existsSync(dest)) {
     console.log("[linux] already exists, skipping:", dest);
   } else {
-    console.log("[linux] downloading ffmpeg (johnvansickle static build)...");
+    console.log("[linux] downloading ffmpeg (BtbN linux64 GPL build)...");
     rmSync(tmpDir, { recursive: true, force: true });
     mkdirSync(tmpDir, { recursive: true });
     const tarball = join(tmpDir, "ffmpeg-linux64.tar.xz");
     sh(
-      `curl -fL -o "${tarball}" https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz`,
+      `curl -fL -o "${tarball}" https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz`,
     );
     sh(`tar -xf "${tarball}" -C "${tmpDir}"`);
     const bin = findFile(tmpDir, "ffmpeg");
