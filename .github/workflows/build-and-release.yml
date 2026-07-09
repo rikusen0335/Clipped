@@ -72,7 +72,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # 鍵はパスワード無し(--ci)で生成したため、このENVは意図的に設定しない。
+          # 空文字列で設定すると「パスワード不一致」エラーになる(Tauriの既知の挙動)。
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Clipped ${{ github.ref_name }}"
